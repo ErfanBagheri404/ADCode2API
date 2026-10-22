@@ -20,6 +20,9 @@ GOOGLE_CLIENT_ID = os.environ.get(
     "ADCODE_GOOGLE_CLIENT_ID",
     "345488063416-60i3dqfj1j8itg9bio2itshmcbq7e3mh.apps.googleusercontent.com")
 GITHUB_CLIENT_ID = os.environ.get("ADCODE_GITHUB_CLIENT_ID", "Ov23lienZUTAiNKAM0UV")
+# the desktop build ships this empty, so Google's token endpoint rejects the code
+# exchange ("client_secret is missing") - Google sign-in needs an app that has one
+GOOGLE_CLIENT_SECRET = os.environ.get("ADCODE_GOOGLE_CLIENT_SECRET", "")
 TOKEN_URL = "https://securetoken.googleapis.com/v1/token"
 IDP_URL = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp"
 
@@ -81,12 +84,16 @@ def import_from_app():
 
 
 def refresh(identity):
-    """Exchange a refresh token for a fresh id token. Returns (idToken, identity)."""
+    """Exchange a refresh token for a fresh id token. Returns the new identity."""
     body = urllib.parse.urlencode({
         "grant_type": "refresh_token",
         "refresh_token": identity["refreshToken"],
     }).encode()
     status, text = _post(_q(TOKEN_URL), body, "application/x-www-form-urlencoded")
+    if status == 403 and text.lstrip().startswith("<"):
+        # Google serves an HTML 403 page when it throttles the IP; one retry clears it
+        time.sleep(2)
+        status, text = _post(_q(TOKEN_URL), body, "application/x-www-form-urlencoded")
     if status != 200:
         raise RuntimeError(f"token refresh failed: HTTP {status} {text[:200]}")
     d = json.loads(text)
@@ -136,6 +143,11 @@ def login_google():
     import threading
     import webbrowser
 
+    if not GOOGLE_CLIENT_SECRET:
+        raise RuntimeError(
+            "Google sign-in isn't configured in this build (the app ships no client secret).\n"
+            "  Use --import-app to adopt the signed-in desktop app, or --login github.")
+
     verifier = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode().rstrip("=")
     challenge = base64.urlsafe_b64encode(
         hashlib.sha256(verifier.encode()).digest()).decode().rstrip("=")
@@ -181,6 +193,7 @@ def login_google():
         raise RuntimeError("sign-in was not completed")
     status, text = _post("https://oauth2.googleapis.com/token", urllib.parse.urlencode({
         "client_id": GOOGLE_CLIENT_ID,
+        "client_secret": GOOGLE_CLIENT_SECRET,
         "code": box["code"][0],
         "code_verifier": verifier,
         "grant_type": "authorization_code",

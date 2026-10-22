@@ -36,10 +36,14 @@ python main.py --no-menu  # server only
 The proxy reuses ADCode's own Firebase identity.
 
 ```bash
-python main.py --import-app   # adopt the signed-in desktop app's identity
-python main.py --login        # browser sign-in (google, default)
-python main.py --login github # GitHub device flow
+python main.py --import-app   # adopt the signed-in desktop app's identity (recommended)
+python main.py --login        # GitHub device flow
+python main.py --login github # same, explicit
 ```
+
+Google sign-in is not available: ADCode's desktop build ships no OAuth client
+secret, so Google's token endpoint rejects the code exchange. Use the desktop
+app import or GitHub.
 
 Tokens are cached in `%APPDATA%/ADCode2API/auth.json` and refreshed automatically
 60 s before expiry.

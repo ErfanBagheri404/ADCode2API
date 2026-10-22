@@ -78,10 +78,19 @@ def run_menu(cfg):
         elif choice == "4":
             test_chat(cfg.port)
         elif choice == "5":
-            from auth import login
-            provider = input("  provider [google]: ").strip() or "google"
+            from auth import login, import_from_app
+            print("  1. Adopt the signed-in desktop app (no browser)")
+            print("  2. GitHub device flow")
+            print("  3. Google (needs a client secret; not in this build)")
+            how = input("  > ").strip() or "1"
             try:
-                login(provider)
+                if how == "1":
+                    ident = import_from_app()
+                    print(f"  imported: uid={ident.get('uid')}" if ident else "  no app identity found")
+                elif how == "2":
+                    login("github")
+                else:
+                    login("google")
             except Exception as e:
                 print(f"  x {e}")
         elif choice == "6":
@@ -96,8 +105,8 @@ def main():
     p.add_argument("--port", type=int, default=61024)
     p.add_argument("--bind", default="127.0.0.1")
     p.add_argument("--api-key", default=None, help="require this key on /v1/ routes")
-    p.add_argument("--login", nargs="?", const="google", default=None,
-                   help="sign in (google|github) then exit")
+    p.add_argument("--login", nargs="?", const="github", default=None,
+                   help="sign in (github|google) then exit")
     p.add_argument("--import-app", action="store_true", help="adopt the ADCode desktop identity")
     p.add_argument("--no-menu", action="store_true", help="start the server directly")
     p.add_argument("--version", action="version", version=f"ADCode2API {version()}")
