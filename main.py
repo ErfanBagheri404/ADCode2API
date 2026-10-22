@@ -4,9 +4,10 @@ import json
 import urllib.error
 import urllib.request
 
+from version import version
+
 
 def banner(cfg):
-    from version import version
     print()
     print("  ADCode2API " + version() + "  —  OpenAI-compatible proxy for ADCode")
     print(f"  upstream : {cfg.base_url}")
@@ -99,6 +100,7 @@ def main():
                    help="sign in (google|github) then exit")
     p.add_argument("--import-app", action="store_true", help="adopt the ADCode desktop identity")
     p.add_argument("--no-menu", action="store_true", help="start the server directly")
+    p.add_argument("--version", action="version", version=f"ADCode2API {version()}")
     args = p.parse_args()
 
     if args.import_app:

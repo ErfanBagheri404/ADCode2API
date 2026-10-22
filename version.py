@@ -5,6 +5,10 @@ import sys
 
 def _base():
     if getattr(sys, "frozen", False):
+        # onefile build: bundled data lives in the temp extraction dir
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass and os.path.exists(os.path.join(meipass, "VERSION")):
+            return meipass
         return os.path.dirname(sys.executable)
     return os.path.dirname(os.path.abspath(__file__))
 
