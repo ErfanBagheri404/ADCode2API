@@ -21,6 +21,10 @@ ADCode's included-AI models — no API key, no cost beyond the app's own quota.
 
 Pure Python 3 standard library — no pip packages needed.
 
+Grab a binary from [Releases](https://github.com/ErfanBagheri404/ADCode2API/releases)
+(`ADCode2API-windows-amd64.exe`, `-linux-amd64`, `-macos-amd64`, `-macos-arm64`)
+or run from source:
+
 ```bash
 cd E:/Dev/Projects/ADCode2API
 python main.py            # menu
