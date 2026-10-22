@@ -1,0 +1,9 @@
+# ADCode2API
+__pycache__/
+*.pyc
+*.exe
+build/
+dist/
+*.spec
+*.log
+.env
