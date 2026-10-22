@@ -65,6 +65,29 @@ def test_client_headers():
     assert h["x"] == "1"
 
 
+def test_sanitize_drops_unsupported_fields():
+    import server
+    body = {
+        "model": "adcode/heabsy-qwen38",
+        "messages": [{"role": "user", "content": [{"type": "text", "text": "hi"},
+                                                  {"type": "image_url", "image_url": {"url": "x"}}]}],
+        "max_tokens": 32, "temperature": 0.7, "top_p": 1, "user": "u",
+        "response_format": {"type": "text"}, "stop": None, "n": 1,
+    }
+    out = server.sanitize(body)
+    assert out["model"] == "heabsy-qwen38", "router prefixes must be stripped"
+    assert out["messages"] == [{"role": "user", "content": "hi"}], out["messages"]
+    assert set(out) == {"model", "messages", "max_tokens"}, out
+
+
+def test_sanitize_keeps_tools():
+    import server
+    tools = [{"type": "function", "function": {"name": "f", "parameters": {"type": "object"}}}]
+    out = server.sanitize({"model": "m", "messages": [{"role": "user", "content": "x"}],
+                           "tools": tools, "tool_choice": "auto"})
+    assert out["tools"] == tools and "tool_choice" not in out
+
+
 def test_client_connection_is_per_thread():
     import threading
     import client

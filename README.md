@@ -95,6 +95,13 @@ export ANTHROPIC_MODEL=heabsy-qwen38
   `client.py` sends the desktop app's UA (`ADCode/2.4.0`) on every request.
 - Upstream ignores `stream: false` on some routes, so the proxy forces a
   non-streaming body for buffered calls.
+- The gateway validates an allowlist and 400s the whole request
+  (`Send a supported chat request.`) on any field it doesn't know, so the proxy
+  drops `temperature`, `top_p`, `stop`, `n`, `user`, `metadata`,
+  `response_format`, `tool_choice`, … and keeps only `model`, `messages`,
+  `max_tokens`/`max_completion_tokens`, `stream`, `stream_options`, `tools`,
+  `reasoning_effort`. Model ids with a router prefix (`adcode/heabsy-qwen38`)
+  are stripped to the bare id, and content part arrays are flattened to text.
 - Anthropic `/v1/messages` is served by translating to OpenAI format upstream —
   ADCode's own `/v1/messages` route is not exposed for this account type.
 

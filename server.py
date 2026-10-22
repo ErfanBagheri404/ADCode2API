@@ -11,6 +11,41 @@ CHAT_PATH = "/v1/ai/tagflow/chat/completions"
 CONFIG_PATH = "/v1/ai/tagflow/config"
 _models_cache = {"at": 0.0, "data": None}
 
+# The included-AI gateway validates an allowlist and 400s the whole request
+# ("Send a supported chat request.") when it sees anything else, so drop the
+# fields it doesn't know instead of forwarding them.
+ALLOWED_FIELDS = ("model", "messages", "max_tokens", "max_completion_tokens",
+                  "stream", "stream_options", "tools", "reasoning_effort")
+
+
+def _flatten(content):
+    """Gateway only reads plain-string content; join text parts, drop the rest."""
+    if isinstance(content, str) or content is None:
+        return content
+    if isinstance(content, list):
+        parts = []
+        for blk in content:
+            if isinstance(blk, str):
+                parts.append(blk)
+            elif isinstance(blk, dict) and blk.get("type") in (None, "text", "input_text"):
+                parts.append(blk.get("text") or "")
+        return "".join(parts)
+    return str(content)
+
+
+def sanitize(req):
+    """Shape an OpenAI chat body into what the gateway accepts."""
+    out = {k: req[k] for k in ALLOWED_FIELDS if k in req}
+    model = out.get("model") or ""
+    if "/" in model:  # a router may prefix the id ("adcode/heabsy-qwen38")
+        model = model.rsplit("/", 1)[-1]
+    out["model"] = model
+    out["messages"] = [{**{k: v for k, v in m.items() if k in ("role", "content", "tool_calls",
+                                                               "tool_call_id", "name")},
+                        "content": _flatten(m.get("content"))}
+                       for m in req.get("messages", []) if isinstance(m, dict)]
+    return out
+
 
 class Handler(http.server.BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
@@ -84,8 +119,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self._json(400, {"error": {"message": f"bad json: {e}", "type": "invalid_request_error"}})
             return
         token = auth.get_token()
+        up = sanitize(req)
         if req.get("stream"):
-            conn, resp = client.stream(CHAT_PATH, body, token)
+            conn, resp = client.stream(CHAT_PATH, json.dumps(up).encode(), token)
             try:
                 if resp.status != 200:
                     self._json(resp.status, {"error": {"message": resp.read().decode("utf-8", "replace")[:2000],
@@ -99,9 +135,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     pass
             return
         # upstream defaults to streaming when the flag is absent
-        req["stream"] = False
-        body = json.dumps(req).encode()
-        status, _, data = client.request("POST", CHAT_PATH, body=body, token=token)
+        up["stream"] = False
+        status, _, data = client.request("POST", CHAT_PATH, body=json.dumps(up).encode(), token=token)
         self._raw(status, data, "application/json")
 
     def _anthropic(self, body):
