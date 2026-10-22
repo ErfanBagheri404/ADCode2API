@@ -9,6 +9,7 @@ on:
       - "VERSION"
       - "*.md"
       - ".github/**"
+  workflow_dispatch:
 
 permissions:
   contents: write
