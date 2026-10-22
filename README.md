@@ -59,12 +59,22 @@ Optional local key: `--api-key sk-local` then send `Authorization: Bearer sk-loc
 
 ## Client config
 
+OpenAI SDK / any OpenAI-compatible client:
+
 ```json
 {
   "base_url": "http://127.0.0.1:61024/v1",
   "api_key": "not-needed",
   "model": "heabsy-qwen38"
 }
+```
+
+Claude Code and other Anthropic clients:
+
+```bash
+export ANTHROPIC_BASE_URL=http://127.0.0.1:61024
+export ANTHROPIC_AUTH_TOKEN=not-needed
+export ANTHROPIC_MODEL=heabsy-qwen38
 ```
 
 ## Env overrides
